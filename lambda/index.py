@@ -4,9 +4,8 @@ import os
 import boto3
 import re  # 正規表現モジュールをインポート
 from botocore.exceptions import ClientError
-import requests  # FastAPI クライアントを追加
+import urllib.request
 
-FASTAPI_URL = "https://ef62-34-143-231-18.ngrok-free.app/"
 
 # Lambda コンテキストからリージョンを抽出する関数
 def extract_region_from_arn(arn):
@@ -20,8 +19,9 @@ def extract_region_from_arn(arn):
 bedrock_client = None
 
 # モデルID
-#MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
+FASTAPI_URL = "https://ef62-34-143-231-18.ngrok-free.app/"
 MODEL_ID = FASTAPI_URL
+
 def lambda_handler(event, context):
     try:
         # コンテキストから実行リージョンを取得し、クライアントを初期化
@@ -72,47 +72,40 @@ def lambda_handler(event, context):
                 })
         
         # invoke_model用のリクエストペイロード
-        # request_payload = {
-        #     "messages": bedrock_messages,
-        #     "inferenceConfig": {
-        #         "maxTokens": 512,
-        #         "stopSequences": [],
-        #         "temperature": 0.7,
-        #         "topP": 0.9
-        #     }
-        # }
-        
-        # print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
-        
-        # # invoke_model APIを呼び出し
-        # response = bedrock_client.invoke_model(
-        #     modelId=MODEL_ID,
-        #     body=json.dumps(request_payload),
-        #     contentType="application/json"
-        # )        
-
-        # # レスポンスを解析
-        # response_body = json.loads(response['body'].read())
-        # print("Bedrock response:", json.dumps(response_body, default=str))
-        
-        #####################################################
-        # FastAPI サーバーへのリクエストペイロード
         request_payload = {
-            "message": message,
-            "conversationHistory": conversation_history
+          "prompt":bedrock_messages,
+          
+            # "messages": bedrock_messages,
+            # "inferenceConfig": {
+                "maxTokens": 512,
+                "do_sample":True,
+                "stopSequences": [],
+                "temperature": 0.7,
+                "topP": 0.9
+            #}
         }
-
-        # FastAPI サーバーにリクエストを送信
-        response = requests.post(f"{FASTAPI_URL}/predict", json=request_payload)
         
-        # FastAPI サーバーにリクエストを送信
-        response = requests.post(f"{FASTAPI_URL}/predict", json=request_payload)
-
+        print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
+        
+        # invoke_model APIを呼び出し
+        response = bedrock_client.invoke_model(
+          "generated_text": "string",
+          "response_time": 0
+            # modelId=MODEL_ID,
+            # body=json.dumps(request_payload),
+            # contentType="application/json"
+        )
+        #MODEL_ID と /generate を組み合わせてリクエストを送信するURLを作成
+        url = f"{MODEL_ID}/generate"
+        #urllib.request.urlopen() 関数を使用して指定されたURLにリクエストを送信
+        with urllib.request.urlopen(url, data=json.dumps(request_payload).encode('utf-8')) as response:
+          #レスポンスの本文を取得
+          response_body = json.loads(response.read().decode('utf-8'))
+          
         # レスポンスを解析
-        response_data = response.json()
-        assistant_response = response_data["response"]
+        response_body = json.loads(response['body'].read())
+        print("Bedrock response:", json.dumps(response_body, default=str))
         
-        #####################################################
         # 応答の検証
         if not response_body.get('output') or not response_body['output'].get('message') or not response_body['output']['message'].get('content'):
             raise Exception("No response content from the model")
