@@ -6,7 +6,7 @@ import re  # 正規表現モジュールをインポート
 from botocore.exceptions import ClientError
 import requests  # FastAPI クライアントを追加
 
-FASTAPI_URL = os.environ.get("FASTAPI_URL", "https://ef62-34-143-231-18.ngrok-free.app/")
+FASTAPI_URL = "https://ef62-34-143-231-18.ngrok-free.app/"
 
 # Lambda コンテキストからリージョンを抽出する関数
 def extract_region_from_arn(arn):
@@ -20,8 +20,8 @@ def extract_region_from_arn(arn):
 bedrock_client = None
 
 # モデルID
-MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
-
+#MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
+MODEL_ID = FASTAPI_URL
 def lambda_handler(event, context):
     try:
         # コンテキストから実行リージョンを取得し、クライアントを初期化
