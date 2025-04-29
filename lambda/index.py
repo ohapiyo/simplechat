@@ -77,11 +77,11 @@ def lambda_handler(event, context):
           
             # "messages": bedrock_messages,
             # "inferenceConfig": {
-                "maxTokens": 512,
+                "max_new_tokens": 512,
                 "do_sample":True,
-                "stopSequences": [],
+                # "stopSequences": [],
                 "temperature": 0.7,
-                "topP": 0.9
+                "top_p": 0.9
             #}
         }
         
