@@ -4,7 +4,6 @@ import os
 import boto3
 import re  # 正規表現モジュールをインポート
 from botocore.exceptions import ClientError
-import urllib.request
 
 
 # Lambda コンテキストからリージョンを抽出する関数
@@ -19,8 +18,9 @@ def extract_region_from_arn(arn):
 bedrock_client = None
 
 # モデルID
-FASTAPI_URL = "https://ef62-34-143-231-18.ngrok-free.app/"
-MODEL_ID = FASTAPI_URL
+# MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
+# FastAPIのURL
+fast_api = ""
 
 def lambda_handler(event, context):
     try:
@@ -45,7 +45,7 @@ def lambda_handler(event, context):
         conversation_history = body.get('conversationHistory', [])
         
         print("Processing message:", message)
-        print("Using model:", MODEL_ID)
+        # print("Using model:", MODEL_ID)
         
         # 会話履歴を使用
         messages = conversation_history.copy()
@@ -72,47 +72,65 @@ def lambda_handler(event, context):
                 })
         
         # invoke_model用のリクエストペイロード
-        request_payload = {
-          "prompt":bedrock_messages,
-          
-            # "messages": bedrock_messages,
-            # "inferenceConfig": {
-                "max_new_tokens": 512,
-                "do_sample":True,
-                # "stopSequences": [],
-                "temperature": 0.7,
-                "top_p": 0.9
-            #}
+        # request_payload = {
+        #     "messages": bedrock_messages,
+        #     "inferenceConfig": {
+        #         "maxTokens": 512,
+        #         "stopSequences": [],
+        #         "temperature": 0.7,
+        #         "topP": 0.9
+        #     }
+        # }
+
+        #fastAPI呼び出しのためのリクエストボディ
+
+        params = {
+            #data content
+            "prompt": "string",
+            "max_new_tokens": 512,
+            "do_sample": True,
+            "temperature": 0.7,
+            "top_p": 0.9
+            }
+
+        #request bodyをjson形式に変換する
+        data = json.dumps(params).encode('utf-8')
+
+        #リクエストヘッダー
+        headers = {
+            'Content-Type': 'application/json'
         }
-        
-        print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
+
+        #リクエストオブジェクト作成
+        # Explicitly set the method to POST
+        req = urllib.request.Request(api_url, data=data, headers=headers, method="POST")
+
+        # print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
         
         # invoke_model APIを呼び出し
-        response = bedrock_client.invoke_model(
-          "generated_text": "string",
-          "response_time": 0
-            # modelId=MODEL_ID,
-            # body=json.dumps(request_payload),
-            # contentType="application/json"
-        )
-        #MODEL_ID と /generate を組み合わせてリクエストを送信するURLを作成
-        url = f"{MODEL_ID}/generate"
-        #urllib.request.urlopen() 関数を使用して指定されたURLにリクエストを送信
-        with urllib.request.urlopen(url, data=json.dumps(request_payload).encode('utf-8')) as response:
-          #レスポンスの本文を取得
-          response_body = json.loads(response.read().decode('utf-8'))
-          
+        # response = bedrock_client.invoke_model(
+        #     modelId=MODEL_ID,
+        #     body=json.dumps(request_payload),
+        #     contentType="application/json"
+        # )
+        
+        #fast api 呼び出し（リクエスト送信）
+        with urllib.request.urlopen(req) as res:
+          response = res.read()
+
+
         # レスポンスを解析
-        response_body = json.loads(response['body'].read())
-        print("Bedrock response:", json.dumps(response_body, default=str))
+        # response_body = json.loads(response['generated_text'].read())
+        response_body = response['generated_text']
+        print("FastAPI response:", response_body)
         
         # 応答の検証
-        if not response_body.get('output') or not response_body['output'].get('message') or not response_body['output']['message'].get('content'):
-            raise Exception("No response content from the model")
+        # if not response_body.get('output') or not response_body['output'].get('message') or not response_body['output']['message'].get('content'):
+        #     raise Exception("No response content from the model")
         
         # アシスタントの応答を取得
-        assistant_response = response_body['output']['message']['content'][0]['text']
-        
+        # assistant_response = response_body['output']['message']['content'][0]['text']
+        assistant_response = response_body
         # アシスタントの応答を会話履歴に追加
         messages.append({
             "role": "assistant",
