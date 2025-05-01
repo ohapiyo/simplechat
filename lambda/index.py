@@ -21,7 +21,7 @@ bedrock_client = None
 # モデルID
 # MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
 # FastAPIのURL
-fast_api = ""
+api_url = ""
 
 def lambda_handler(event, context):
     try:
