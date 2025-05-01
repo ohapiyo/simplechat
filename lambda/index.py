@@ -1,4 +1,5 @@
 # lambda/index.py
+import urllib.request
 import json
 import os
 import boto3
